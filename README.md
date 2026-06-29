@@ -19,7 +19,6 @@ The original research code was developed in notebooks. This version keeps the no
 ```text
 AERGARCH.ipynb              Main notebook for the SPX example
 src/                        Python helper modules
-scripts/                    Small smoke-test and preview scripts
 data/spx/                   Processed SPX example data
 requirements.txt            Python package list
 environment.yml             Conda environment record
@@ -67,20 +66,10 @@ ae_allparams_df["SPX"]
 
 The main forecast variance series is stored in the `F_var` column. Predictive negative log-likelihood values are stored in the `Each_f_nLL` column.
 
-## Optional Smoke Checks
-
-The following scripts provide small checks for the organized sections:
-
-```powershell
-python scripts\smoke_model_sections_spx.py
-python scripts\smoke_autoencoder_spx.py
-python scripts\smoke_risk_sections.py
-```
-
-These scripts are intended as lightweight checks that the organized code paths still load and run.
 
 ## Notes
 
 - Cached model outputs are ignored through `.gitignore`.
 - Notebook outputs were cleared for a cleaner GitHub version.
 - The repository is kept focused on the SPX demonstration.
+
