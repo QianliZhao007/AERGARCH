@@ -67,9 +67,5 @@ ae_allparams_df["SPX"]
 The main forecast variance series is stored in the `F_var` column. Predictive negative log-likelihood values are stored in the `Each_f_nLL` column.
 
 
-## Notes
 
-- Cached model outputs are ignored through `.gitignore`.
-- Notebook outputs were cleared for a cleaner GitHub version.
-- The repository is kept focused on the SPX demonstration.
 
