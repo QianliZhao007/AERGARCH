@@ -1,8 +1,6 @@
 """SPX-only runners for the main AERGARCH notebook sections.
 
-The functions here wrap the original model functions without changing their
-estimation logic. They keep the old notebook variable shapes so later sections
-can still use the same dictionaries.
+The functions here adapt model output to the dictionaries used in the notebook.
 """
 
 from pathlib import Path
@@ -12,8 +10,9 @@ import numpy as np
 import pandas as pd
 
 from .aergarch_functions import (
+    FW_PARAMETER_NAMES,
+    fit_predict_fw,
     lw_rgarch_lg_fit_pred_process,
-    nlw_rgarch_lg_fit_pred_process,
     rgarch_lg_fit_pred_process,
     rgarch_lg_dr_fit_pred_process,
     rolling_pca_ica,
@@ -47,8 +46,8 @@ __all__ = [
     "build_avg_measures",
     "run_lw_realgarch_spx",
     "collect_lw_results",
-    "run_nlw_realgarch_spx",
-    "collect_nlw_results",
+    "run_fw_realgarch_spx",
+    "collect_fw_results",
     "run_avg_realgarch_spx",
     "collect_single_measure_results",
     "run_rv5_realgarch_spx",
@@ -236,7 +235,7 @@ def collect_lw_results(results, rms_insample, verbose=True):
     return allparams, forecast_nll, synxt_insample
 
 
-def run_nlw_realgarch_spx(
+def run_fw_realgarch_spx(
     market_list,
     rms_insample,
     rms_outsample,
@@ -246,15 +245,16 @@ def run_nlw_realgarch_spx(
     overwrite=False,
     save=True,
 ):
+    """Fit FW-RealGARCH and generate one-step-ahead rolling forecasts."""
     return _get_or_compute(
-        "nlw_rgarch_spx.pkl",
+        "fw_rgarch_spx.pkl",
         lambda: _run_realgarch_for_measure(
             market_list,
             rms_insample,
             rms_outsample,
             returns_insample,
             returns_outsample,
-            nlw_rgarch_lg_fit_pred_process,
+            fit_predict_fw,
         ),
         use_cache=use_cache,
         overwrite=overwrite,
@@ -262,75 +262,43 @@ def run_nlw_realgarch_spx(
     )
 
 
-def collect_nlw_results(results, rms_insample, verbose=True):
+def collect_fw_results(results, rms_insample, verbose=True):
+    """Return forecast frames, predictive losses, and fitted realized measures."""
     allparams = {}
     forecast_nll = []
     synxt_insample = {}
 
     for result in results:
-        (
-            name,
-            insample_ab,
-            insample_weights,
-            insample_params,
-            fit_nll,
-            forecast_nll_value,
-            eachstep_forecast_nll,
-            forecast_var,
-            con_var,
-            params_df,
-            syn_xt_list,
-            ab_frame,
-            weights_frame,
-        ) = result
+        name = result["market"]
+        insample_weights = result["insample_weights"]
+        insample_synthetic = result["insample_synthetic_measure"]
+        if (not insample_weights.index.equals(rms_insample[name].columns)
+                or not insample_synthetic.index.equals(rms_insample[name].index)):
+            raise ValueError(f"FW-RealGARCH results for {name} do not match the training dates and measures.")
 
-        omega, beta, gamma, xi, phi, tau1, tau2, sigma_mu = insample_params
-        forecast_nll.append((name, forecast_nll_value))
-        test_index = params_df.index
-
-        final_market_df = pd.concat(
-            [
-                pd.Series(forecast_var, index=test_index, name="F_var"),
-                pd.Series(
-                    eachstep_forecast_nll, index=test_index, name="Each_f_nLL"
-                ),
-                pd.Series(
-                    syn_xt_list[len(con_var) - 1 : -1],
-                    index=test_index,
-                    name="Syn_xt",
-                ),
-                params_df,
-                pd.DataFrame(ab_frame, index=test_index, columns=["a", "b"]),
-                pd.DataFrame(
-                    weights_frame,
-                    index=test_index,
-                    columns=WEIGHT_COL_NAMES[: weights_frame.shape[1]],
-                ),
-            ],
-            axis=1,
-        )
-
-        allparams[name] = final_market_df
-        synxt_insample[name] = pd.Series(
-            syn_xt_list[: len(con_var)],
-            index=rms_insample[name].index,
-            name=name,
-        )
+        mixture_names = FW_PARAMETER_NAMES[:5]
+        garch_names = FW_PARAMETER_NAMES[5:]
+        weight_names = [f"weight_{name}" for name in insample_weights.index]
+        columns = ["forecast_var", "eachstep_nll", "synthetic_rm_lag",
+                   *garch_names, *mixture_names, *weight_names]
+        forecast = result["forecast"].loc[:, columns].copy()
+        forecast.columns = [
+            "F_var", "Each_f_nLL", "Syn_xt",
+            "Omega", "Beta", "Gamma", "Xi", "Phi", "Tau1", "Tau2", "Sigma_mu",
+            *mixture_names, *insample_weights.index,
+        ]
+        allparams[name] = forecast
+        forecast_nll.append((name, result["forecast_nll"]))
+        synxt_insample[name] = insample_synthetic.rename(name)
 
         if verbose:
-            print(f"NLW-RGARCH-lg-{name}")
-            print(f"omega_{name}: {round(omega, 4)}")
-            print(f"beta_{name}: {round(beta, 4)}")
-            print(f"gamma_{name}: {round(gamma, 4)}")
-            print(f"xi_{name}: {round(xi, 4)}")
-            print(f"phi_{name}: {round(phi, 4)}")
-            print(f"tau1_{name}: {round(tau1, 4)}")
-            print(f"tau2_{name}: {round(tau2, 4)}")
-            print(f"sigma_mu_{name}: {round(sigma_mu, 4)}")
-            print(f"ab_{name}: {insample_ab}")
-            print(f"weights_{name}: {insample_weights}")
-            print(f"NLW-RGARCH-lg-{name} Trained negative log-likelihood: {round(fit_nll, 4)}")
-            print(f"NLW-RGARCH-lg-{name} Predictive negative log-likelihood: {round(forecast_nll_value, 4)}")
+            model = f"FW-RGARCH-lg-{name}"
+            print(model)
+            for param, value in zip(FW_PARAMETER_NAMES, result["fit"].x):
+                print(f"{param}_{name}: {value:.4f}")
+            print(f"weights_{name}: {insample_weights.to_numpy()}")
+            print(f"{model} Trained negative log-likelihood: {result['fit_nll']:.4f}")
+            print(f"{model} Predictive negative log-likelihood: {result['forecast_nll']:.4f}")
             print("-" * 80)
 
     return allparams, forecast_nll, synxt_insample

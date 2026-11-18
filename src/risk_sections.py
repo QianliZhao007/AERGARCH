@@ -9,14 +9,14 @@ DEFAULT_ALPHA = 0.025
 DEFAULT_MCS_ALPHA = 0.25
 DEFAULT_MODEL_MAPPING = {
     "lw": "lw",
-    "nlw": "nlw",
+    "fw": "fw",
     "avg": "avg",
     "ae": "12-12-1 ae",
     "pca": "pca",
     "ica": "ica",
     "rv5": "rv5",
 }
-DEFAULT_MODEL_KEYS = ["lw", "nlw", "avg", "ae", "pca", "ica", "rv5"]
+DEFAULT_MODEL_KEYS = ["lw", "fw", "avg", "ae", "pca", "ica", "rv5"]
 
 __all__ = [
     "DEFAULT_ALPHA",
@@ -87,7 +87,7 @@ def get_jointloss_series(y_true, var_pred, es_pred, alpha=DEFAULT_ALPHA):
 
 def build_model_data_dict(
     lw_allparams_df,
-    nlw_allparams_df,
+    fw_allparams_df,
     avg_allparams_df,
     ae_allparams_df,
     pca_allparams_df,
@@ -96,7 +96,7 @@ def build_model_data_dict(
 ):
     return {
         "lw": lw_allparams_df,
-        "nlw": nlw_allparams_df,
+        "fw": fw_allparams_df,
         "avg": avg_allparams_df,
         "ae": ae_allparams_df,
         "pca": pca_allparams_df,

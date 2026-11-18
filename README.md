@@ -7,7 +7,7 @@ The original research code was developed in notebooks. This version keeps the no
 ## What This Example Includes
 
 - Processed SPX example data loading and preparation.
-- LW-RealGARCH and NLW-RealGARCH examples.
+- LW-RealGARCH and FW-RealGARCH examples.
 - AVG-RealGARCH and single-measure RV5 Realized GARCH examples.
 - PC-RealGARCH and IC-RealGARCH examples.
 - A 12-12-1 rolling autoencoder example for SPX.
@@ -56,7 +56,7 @@ The notebook uses SPX as the example market. It produces model-specific result d
 
 ```python
 lw_allparams_df["SPX"]
-nlw_allparams_df["SPX"]
+fw_allparams_df["SPX"]
 avg_allparams_df["SPX"]
 rv5_allparams_df["SPX"]
 pca_allparams_df["SPX"]
